@@ -5,7 +5,7 @@ FROM batting;
 
 --Question 2
 --2. Find the name and height of the shortest player in the database. How many games did he play in? What is the name of the team for which he played?
-SELECT MIN(height),
+SELECT 	p.height,
 		a.teamid,
 		a.g_all,
 		p.namegiven,
@@ -18,8 +18,8 @@ USING(playerid)
 INNER JOIN teams AS t
 USING(teamid)
 WHERE p.height IS NOT NULL
-GROUP BY p.namefirst, p.namelast,a.teamid,a.teamid,p.namegiven,a.g_all,t.name
-ORDER BY MIN(height)
+GROUP BY p.namefirst, p.namelast,a.teamid,a.teamid,p.namegiven,a.g_all,t.name,p.height
+ORDER BY p.height
 LIMIT 1;
 
 --Question 3
@@ -102,7 +102,7 @@ WITH lowest_ws AS (SELECT   name,
 				  		AND w IN (SELECT MIN(w)
 								 FROM teams
 								 WHERE wswin ILIKE '%y%'))
-SELECT   h.name,
+SELECT  h.name,
 		h.yearid,
 		h.w,
 		h.wswin,
@@ -179,14 +179,21 @@ WITH max AS(SELECT 	w,
 					teamid,
 					name, 
 					MAX(w)OVER(PARTITION BY yearid) AS max_wins
-			FROM teams)
-SELECT 	ROUND((COUNT(m.max_wins)::NUMERIC/(2016-1970))*100,3) AS percent_max_wins_wswin
+			FROM teams),
+year AS (SELECT t.yearid,
+		 		m.w
+		FROM teams AS t
+		INNER JOIN max AS m
+		 ON m.yearid = t.yearid
+		WHERE t.w = m.max_wins)
+SELECT 	ROUND((COUNT(DISTINCT(m.max_wins))::NUMERIC/COUNT(DISTINCT(t.yearid)))*100,3)::NUMERIC AS percent_max_wins_wswin
 FROM teams AS t
 INNER JOIN max AS m
 ON t.yearid = m.yearid
 	AND t.teamid = m.teamid
-WHERE t.w = m.max_wins
-	AND t.wswin ILIKE '%y%'
+INNER JOIN year AS y
+ON t.yearid = y.yearid
+WHERE t.wswin ILIKE '%y%'
 	AND (t.yearid BETWEEN 1970 AND 1980
 	   OR t.yearid BETWEEN 1982 AND 2016);
 	   
@@ -224,7 +231,7 @@ LIMIT 5;
 --Lowest Average Attendance 2016	
 
 --Question 9
---SELECT p.namefirst, p.namelast, a.yearid, t.name
+SELECT p.namefirst, p.namelast, a.yearid, t.name
 FROM managers AS m
 INNER JOIN people AS p
 USING (playerid)
